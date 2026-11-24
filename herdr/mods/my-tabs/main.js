@@ -129,8 +129,8 @@ export default class Tabs extends View {
       ? Math.max(10, (root.traffic_lights[0] + 64) / settings().zoom - (sidebar?.hidden ? 0 : sidebar?.size?.px ?? 0))
       : 10;
     const panel = find(root, "panel"), body = find(root, "panel-body");
-    const prs = find(root, "pr-flow");
-    const enabled = [...(shared("workspace.panels") ?? ["files", "changes"]), ...(find(root, "tasks") ? ["tasks"] : [])];
+    const right = find(root, "right");
+    const enabled = shared("workspace.panels") ?? ["files", "changes"];
     this.syncPanel(space, panel, body, enabled);
     const panelButton = (id, label, icon) => {
       const on = panel && !panel.hidden && body?.active === id;
@@ -142,6 +142,18 @@ export default class Tabs extends View {
           else { run("layout.select", { stack: "panel-body", child: id }); run("layout.show", { id: "panel" }); }
         }).child(svg(icon).size(14)).child(label);
     };
+    // The right column holds Pull requests above Tasks; each button shows or hides its half,
+    // and the column itself goes when both are hidden.
+    const sideButton = (id, otherId, label, icon) => {
+      const node = find(root, id), other = find(root, otherId), on = !right.hidden && node && !node.hidden;
+      return h_flex().id(`side-${id}`).h(26).px(8).gap(5).flex_none().items_center().rounded(6)
+        .text_size(12).bg(on ? t.selected : t.chrome).text_color(on ? t.foreground : t.muted)
+        .hover(s => s.bg(t.hover)).on_mouse_down("left", stop)
+        .on_click(() => {
+          if (on) { run("layout.hide", { id }); if (!other || other.hidden) run("layout.hide", { id: "right" }); }
+          else { run("layout.show", { id }); run("layout.show", { id: "right" }); }
+        }).child(svg(icon).size(14)).child(label);
+    };
     return h_flex().size_full().min_w(0).px(10).pl(lightsPadding).gap(3).items_center().bg(t.chrome).border_b(1).border_color(t.border)
       .on_mouse_up("left", () => { this.pressed = null; })
       .on_scroll_wheel(e => this.wheel(e))
@@ -151,12 +163,8 @@ export default class Tabs extends View {
       .child(button("tab-new", "+", () => openOverlay({ mod: "new-menu", kind: "popup", width: 250, height: 512 })))
       .when(enabled.includes("files"), el => el.child(panelButton("files", "Files", "mods/files/file.svg")))
       .when(enabled.includes("changes"), el => el.child(panelButton("changes", "Changes", "mods/changes/changes.svg")))
-      .when(enabled.includes("tasks"), el => el.child(panelButton("tasks", "Tasks", "mods/workspace-chrome/circle-check.svg")))
-      .when(Boolean(prs), el => el.child(h_flex().id("panel-prs").h(26).px(8).gap(5).flex_none().items_center().rounded(6)
-        .text_size(12).bg(prs.hidden ? t.chrome : t.selected).text_color(prs.hidden ? t.muted : t.foreground)
-        .hover(s => s.bg(t.hover)).on_mouse_down("left", stop)
-        .on_click(() => run("layout.toggle", { id: "pr-flow" }))
-        .child(svg("mods/pr-flow/merge.svg").size(14)).child("Pull requests")))
+      .when(Boolean(right), el => el.child(sideButton("pr-flow", "tasks", "Pull requests", "mods/pr-flow/merge.svg"))
+        .child(sideButton("tasks", "pr-flow", "Tasks", "mods/workspace-chrome/circle-check.svg")))
       .when(w?.buttons, el => el.child(button("minimize", w.platform === "windows" ? svg("mods/my-tabs/win-min.svg").size(16) : "−", () => run("window.minimize")))
         .child(button("maximize", w.platform === "windows" ? svg(`mods/my-tabs/${w.maximized ? "win-restore" : "win-max"}.svg`).size(16) : "□", () => run("window.maximize")))
         .child(button("close-window", w.platform === "windows" ? svg("mods/my-tabs/win-close.svg").size(16) : svg("mods/pane/close.svg").size(13), () => run("window.close"))));

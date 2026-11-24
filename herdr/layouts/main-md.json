@@ -143,13 +143,6 @@
                       "content": {
                         "mod": "changes"
                       }
-                    },
-                    {
-                      "id": "tasks",
-                      "type": "block",
-                      "content": {
-                        "mod": "repo-tasks"
-                      }
                     }
                   ],
                   "active": "files"
@@ -163,19 +156,41 @@
               "hidden": true
             },
             {
-              "id": "pr-flow",
-              "type": "block",
+              "id": "right",
+              "type": "column",
               "size": {
-                "px": 340
-              },
-              "content": {
-                "mod": "pr-flow",
-                "props": {
-                  "lang": "en"
-                }
+                "px": 566
               },
               "min": 280,
-              "max": 1200
+              "max": 1200,
+              "gap": 8,
+              "children": [
+                {
+                  "id": "pr-flow",
+                  "type": "block",
+                  "content": {
+                    "mod": "pr-flow",
+                    "props": {
+                      "lang": "en"
+                    }
+                  },
+                  "size": {
+                    "weight": 1
+                  },
+                  "min": 120
+                },
+                {
+                  "id": "tasks",
+                  "type": "block",
+                  "content": {
+                    "mod": "repo-tasks"
+                  },
+                  "size": {
+                    "weight": 1
+                  },
+                  "min": 120
+                }
+              ]
             }
           ],
           "padding": 8,

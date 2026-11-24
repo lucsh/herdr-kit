@@ -10,7 +10,8 @@ My Herdr desktop app setup, for any Mac.
 - **Tasks panel.** Each repo gets one to-do list, shared by all of its worktrees. Agents add to the same list with `tasks add "[<branch>] <text>"`. The `tasks` command is zamarrowski/herdr-tasks' CLI, pinned in `kit.env`.
 - **Status bar.** It shows the focused Claude session's model, effort, context, 5-hour and weekly usage, cost, run time and account. It also shows the folder, the branch with its count of changed files, and the lines added and removed.
 - **Working agents** show a braille spinner.
-- **Pull requests panel.** This is jjangsky/herdr-pr-flow 0.6.0 (MIT) with a local patch that finds PRs in submodules. `cmd-shift-g` toggles it, and you can drag its left edge to resize it.
+- **Pull requests panel.** This is jjangsky/herdr-pr-flow 0.6.0 (MIT) with a local patch that finds PRs in submodules.
+- **Right column.** Pull requests sits above Tasks, half the height each; drag the divider between them to change the split, or the column's left edge to change its width. The tab-bar buttons show and hide each half, and `cmd-shift-g` toggles the whole column.
 - **Optional (`--with-resume`):** after a reboot, each terminal resumes the Claude session it was running.
 
 ## Requirements
