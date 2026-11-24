@@ -124,7 +124,7 @@ export default class RepoTasks extends View {
     const action = (key, label, onClick, color) => div().id(`${key}-${id}`).px(5).h(20).flex().items_center().rounded(5).cursor_pointer()
       .text_size(12).text_color(color ?? t.dim).hover(s => s.bg(t.hover).text_color(color ?? t.foreground))
       .on_click((_e, cx) => { onClick(cx); cx.notify(); }).child(label);
-    return h_flex().id(`task-${id}`).min_h(30).flex_none().px(8).py(5).gap(9).items_start().rounded(7).hover(s => s.bg(t.hover))
+    return h_flex().id(`task-${id}`).relative().min_h(30).flex_none().px(8).py(5).gap(9).items_start().rounded(7).hover(s => s.bg(t.hover))
       .on_hover((h, cx) => { if (h) this.hover = id; else if (this.hover === id) { this.hover = null; if (this.confirm === id) this.confirm = null; } cx.notify(); })
       .child(div().id(`check-${id}`).mt(2).size(15).flex_none().flex().items_center().justify_center().rounded(8).cursor_pointer()
         .border(1.5).border_color(task.done ? t.accent : t.input).when(task.done, el => el.bg(t.accent))
@@ -134,7 +134,9 @@ export default class RepoTasks extends View {
         ? Input.new(this.edit).flex_1().min_w(0).h(20).text_size(13).text_color(t.foreground)
         : div().flex_1().min_w(0).whitespace_normal().text_size(13).text_color(task.done ? t.dim : t.foreground)
             .when(task.done, el => el.line_through()).child(task.text))
-      .when(hovered && this.editing !== id, el => el.child(h_flex().flex_none().gap(1).items_center()
+      // Floats over the row's top-right corner so hovering never reflows the task text.
+      .when(hovered && this.editing !== id, el => el.child(h_flex().absolute().top(4).right(6).gap(1).items_center()
+        .px(2).h(24).rounded(6).bg(t.raised ?? t.background).border_1().border_color(t.border).shadow_sm()
         .child(action("up", "↑", cx => this.move(id, -1, cx)))
         .child(action("down", "↓", cx => this.move(id, 1, cx)))
         .child(action("edit", "✎", () => { this.editing = id; this.edit.set_value(task.text); this.edit.focus(); }))
