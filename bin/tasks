@@ -1,0 +1,9 @@
+#!/bin/sh
+# Per-repo to-do list, shared by all worktrees of a repo and with Herdr's Tasks panel
+# (~/.config/herdr-app/mods/repo-tasks). Runs zamarrowski/herdr-tasks' CLI from ~/.local/share/herdr-tasks.
+if common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null); then
+  key=$(printf '%s' "$common" | tr / _)
+else
+  key=global
+fi
+HERDR_PLUGIN_STATE_DIR="$HOME/.local/state/herdr-tasks/$key" exec sh "$HOME/.local/share/herdr-tasks/bin/run.sh" scripts/tasks.mjs "$@"
