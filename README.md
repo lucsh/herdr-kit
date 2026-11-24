@@ -2,6 +2,8 @@
 
 My Herdr desktop app setup, for any Mac.
 
+![Herdr with the kit installed](docs/screenshot.png)
+
 ## What you get
 
 - **The `main-md` layout.** It has a sidebar, a tab bar with Files, Changes, Tasks and Pull requests buttons, and a bottom status bar.
@@ -27,8 +29,11 @@ My Herdr desktop app setup, for any Mac.
 
 ```sh
 git clone <this repo> ~/Repos/herdr-kit
+~/Repos/herdr-kit/install.sh --check         # what's missing, what would block; changes nothing
 ~/Repos/herdr-kit/install.sh                 # add --with-resume for reboot resume
 ```
+
+Asking an agent to install it? Point it at this folder: `AGENTS.md` walks it through checking, installing and verifying.
 
 You can rerun it at any time; it updates what it installed and changes nothing else.
 
