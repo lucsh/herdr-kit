@@ -143,6 +143,16 @@
                       "content": {
                         "mod": "changes"
                       }
+                    },
+                    {
+                      "id": "pr-flow",
+                      "type": "block",
+                      "content": {
+                        "mod": "pr-flow",
+                        "props": {
+                          "lang": "en"
+                        }
+                      }
                     }
                   ],
                   "active": "files"
@@ -166,18 +176,15 @@
               "gap": 8,
               "children": [
                 {
-                  "id": "pr-flow",
+                  "id": "calendar",
                   "type": "block",
-                  "content": {
-                    "mod": "pr-flow",
-                    "props": {
-                      "lang": "en"
-                    }
-                  },
                   "size": {
                     "weight": 1
                   },
-                  "min": 120
+                  "min": 120,
+                  "content": {
+                    "mod": "day-calendar"
+                  }
                 },
                 {
                   "id": "tasks",

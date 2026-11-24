@@ -130,7 +130,7 @@ export default class Tabs extends View {
       : 10;
     const panel = find(root, "panel"), body = find(root, "panel-body");
     const right = find(root, "right");
-    const enabled = shared("workspace.panels") ?? ["files", "changes"];
+    const enabled = [...(shared("workspace.panels") ?? ["files", "changes"]), ...(find(root, "pr-flow") ? ["pr-flow"] : [])];
     this.syncPanel(space, panel, body, enabled);
     const panelButton = (id, label, icon) => {
       const on = panel && !panel.hidden && body?.active === id;
@@ -142,7 +142,7 @@ export default class Tabs extends View {
           else { run("layout.select", { stack: "panel-body", child: id }); run("layout.show", { id: "panel" }); }
         }).child(svg(icon).size(14)).child(label);
     };
-    // The right column holds Pull requests above Tasks; each button shows or hides its half,
+    // The right column holds Calendar above Tasks; each button shows or hides its half,
     // and the column itself goes when both are hidden.
     const sideButton = (id, otherId, label, icon) => {
       const node = find(root, id), other = find(root, otherId), on = !right.hidden && node && !node.hidden;
@@ -163,8 +163,9 @@ export default class Tabs extends View {
       .child(button("tab-new", "+", () => openOverlay({ mod: "new-menu", kind: "popup", width: 250, height: 512 })))
       .when(enabled.includes("files"), el => el.child(panelButton("files", "Files", "mods/files/file.svg")))
       .when(enabled.includes("changes"), el => el.child(panelButton("changes", "Changes", "mods/changes/changes.svg")))
-      .when(Boolean(right), el => el.child(sideButton("pr-flow", "tasks", "Pull requests", "mods/pr-flow/merge.svg"))
-        .child(sideButton("tasks", "pr-flow", "Tasks", "mods/workspace-chrome/circle-check.svg")))
+      .when(enabled.includes("pr-flow"), el => el.child(panelButton("pr-flow", "Pull requests", "mods/pr-flow/merge.svg")))
+      .when(Boolean(right), el => el.child(sideButton("calendar", "tasks", "Calendar", "mods/workspace-chrome/clock.svg"))
+        .child(sideButton("tasks", "calendar", "Tasks", "mods/workspace-chrome/circle-check.svg")))
       .when(w?.buttons, el => el.child(button("minimize", w.platform === "windows" ? svg("mods/my-tabs/win-min.svg").size(16) : "−", () => run("window.minimize")))
         .child(button("maximize", w.platform === "windows" ? svg(`mods/my-tabs/${w.maximized ? "win-restore" : "win-max"}.svg`).size(16) : "□", () => run("window.maximize")))
         .child(button("close-window", w.platform === "windows" ? svg("mods/my-tabs/win-close.svg").size(16) : svg("mods/pane/close.svg").size(13), () => run("window.close"))));

@@ -8,6 +8,7 @@ KIT=$(cd "$(dirname "$0")" && pwd)
 HERDR=${HERDR_APP_HOME:-$HOME/.config/herdr-app}
 SHARE=$HOME/.local/share/herdr-kit
 TASKS_DIR=$HOME/.local/share/herdr-tasks
+CAL=$HOME/.local/share/herdr-calendar
 BIN=$HOME/.local/bin
 MANIFEST=$SHARE/manifest.txt
 RESUME=0 FORCE=0
@@ -43,6 +44,7 @@ for c in git node jq rsync; do command -v "$c" >/dev/null || missing+=("$c"); do
 [ "$(node -p 'process.versions.node.split(".")[0]')" -ge 20 ] || die "Node.js 20 or newer is required"
 [ -d "$HERDR" ] || die "$HERDR not found: install the Herdr app and open it once first"
 command -v gh >/dev/null || echo "note: gh (GitHub CLI) not found; the Pull requests panel needs it (brew install gh && gh auth login)"
+command -v swiftc >/dev/null || echo "note: swiftc not found; the Calendar panel needs its helper built (xcode-select --install, then rerun)"
 
 # ── what goes where ──────────────────────────────────────────────────────────
 srcs=() dsts=()
@@ -53,6 +55,7 @@ add herdr/themes/luc.json "$HERDR/themes/luc.json"
 for m in "$KIT"/herdr/mods/*/; do m=$(basename "$m"); add "herdr/mods/$m" "$HERDR/mods/$m"; done
 add bin/tasks "$BIN/tasks"
 add claude/statusline.sh "$SHARE/statusline.sh"
+add calendar "$CAL"
 if [ "$RESUME" = 1 ]; then
   add herdr/claude-resume.zsh "$HERDR/claude-resume.zsh"
   add claude/herdr-app-session-label.py "$SHARE/herdr-app-session-label.py"
@@ -61,7 +64,7 @@ fi
 # True when the manifest says a previous run installed $1.
 ours() { [ -f "$MANIFEST" ] && grep -qxF "$1" "$MANIFEST"; }
 # True when $1 and $2 have the same contents (ignoring Herdr's generated files).
-same() { diff -rq -x gpui-kit.d.ts -x jsconfig.json "$1" "$2" >/dev/null 2>&1; }
+same() { diff -rq -x gpui-kit.d.ts -x jsconfig.json -x HerdrCalendar.app -x .built-source.sha "$1" "$2" >/dev/null 2>&1; }
 
 clashes=()
 for i in "${!dsts[@]}"; do
@@ -86,14 +89,26 @@ for i in "${!dsts[@]}"; do
   s=${srcs[$i]} d=${dsts[$i]}
   mkdir -p "$(dirname "$d")"
   existed=0; [ -e "$d" ] && existed=1
-  if [ -d "$s" ]; then rsync -a --delete --exclude gpui-kit.d.ts --exclude jsconfig.json "$s/" "$d/"
+  if [ -d "$s" ]; then rsync -a --delete --exclude gpui-kit.d.ts --exclude jsconfig.json --exclude HerdrCalendar.app --exclude .built-source.sha "$s/" "$d/"
   else cp "$s" "$d"; fi
   # Only what this kit created (or --force replaced) is ours to remove later; an identical file
   # that was already there stays the person's.
   [ "$existed" = 0 ] && ! ours "$d" && echo "$d" >> "$MANIFEST"
 done
 mkdir -p "$HOME/.cache/herdr-claude"
-chmod +x "$BIN/tasks" "$SHARE/statusline.sh"
+chmod +x "$BIN/tasks" "$SHARE/statusline.sh" "$CAL/build.sh"
+
+# ── calendar helper (its own app, so it gets its own Calendars permission) ───
+# Built only when missing or its source changed: each build is a new signature, and macOS asks again.
+if command -v swiftc >/dev/null; then
+  want=$(cat "$CAL/src/main.swift" "$CAL/src/Info.plist" | shasum | cut -c1-40)
+  if [ ! -d "$CAL/HerdrCalendar.app" ] || [ "$(cat "$CAL/.built-source.sha" 2>/dev/null)" != "$want" ]; then
+    echo "Building the calendar helper"
+    sh "$CAL/build.sh" >/dev/null && echo "$want" > "$CAL/.built-source.sha"
+    open -n -g -a "$CAL/HerdrCalendar.app" --args --sync
+    echo "note: allow \"Herdr Calendar\" to access your calendars and to control Calendar when macOS asks"
+  fi
+fi
 
 # ── tasks CLI (zamarrowski/herdr-tasks, pinned) ──────────────────────────────
 if [ -d "$TASKS_DIR/.git" ]; then
