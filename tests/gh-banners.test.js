@@ -142,3 +142,22 @@ test("todo: order", () => {
   assert.equal(t.error, null);
   assert.deepEqual(t.items.map((i) => [i.kind, i.number]), [["review", 2], ["review", 1], ["ci", 4], ["ready", 3]]);
 });
+
+import { claimAndPost } from "../herdr/mods/gh-banners/claim.js";
+
+const B = [{ title: "A", body: "a", url: "u1" }, { title: "B", body: "b", url: "u2" }];
+
+test("claimAndPost: losing copy posts nothing", async () => {
+  const posted = [];
+  const ok = await claimAndPost({ prevRaw: "old", nextRaw: "new", write: async () => { throw new Error("stale"); }, post: async (b) => posted.push(b), banners: B });
+  assert.equal(ok, false);
+  assert.deepEqual(posted, []);
+});
+
+test("claimAndPost: winner posts all", async () => {
+  const posted = [], writes = [];
+  const ok = await claimAndPost({ prevRaw: null, nextRaw: "new", write: async (text, expected) => { writes.push([text, expected]); }, post: async (b) => posted.push(b.url), banners: B });
+  assert.equal(ok, true);
+  assert.deepEqual(writes, [["new", null]]);
+  assert.deepEqual(posted, ["u1", "u2"]);
+});
