@@ -161,3 +161,36 @@ test("claimAndPost: winner posts all", async () => {
   assert.deepEqual(writes, [["new", null]]);
   assert.deepEqual(posted, ["u1", "u2"]);
 });
+
+// Feeds each snapshot through diff with the state the previous poll returned; one count per poll.
+const chain = (snaps, start = T) => {
+  let state = diff(null, snaps[0], start).state;
+  return snaps.slice(1).map((s, i) => { const r = diff(state, s, start + (i + 1) * MIN); state = r.state; return r.events.length; });
+};
+
+test("diff: a merge fires once across polls", () => {
+  const before = snap();
+  const merged = snap({ merged: [node(9, { mergedAt: new Date(T + 30_000).toISOString() })] });
+  assert.deepEqual(chain([before, merged, merged, merged, merged, merged, merged, merged]), [1, 0, 0, 0, 0, 0, 0]);
+});
+
+test("diff: merges seen on the first run never fire", () => {
+  const merged = snap({ merged: [node(9, { mergedAt: new Date(T - 30_000).toISOString() })] });
+  assert.deepEqual(chain([merged, merged]), [0]);
+});
+
+test("diff: ci fires once per sha even if a check reruns", () => {
+  const s = (contexts) => snap({ mine: [mineNode(1, { sha: "a", contexts })] });
+  assert.deepEqual(chain([s([ctx("PENDING")]), s([ctx("FAILURE")]), s([ctx("FAILURE"), ctx("PENDING")]), s([ctx("FAILURE"), ctx("FAILURE")])]), [1, 0, 0]);
+});
+
+test("diff: ready survives an UNKNOWN merge state", () => {
+  const s = (mergeStateStatus) => snap({ mine: [mineNode(1, { mergeStateStatus })] });
+  assert.deepEqual(chain([s("BLOCKED"), s("CLEAN"), s("UNKNOWN"), s("CLEAN"), s("UNKNOWN"), s("CLEAN")]), [1, 0, 0, 0, 0]);
+});
+
+test("todo: a ready PR stays listed while its merge state is UNKNOWN", () => {
+  const prev = diff(null, snap({ mine: [mineNode(1, { mergeStateStatus: "CLEAN" })] }), T).state;
+  const t = todo(snap({ mine: [mineNode(1, { mergeStateStatus: "UNKNOWN" })] }), T + MIN, prev);
+  assert.deepEqual(t.items.map((i) => i.kind), ["ready"]);
+});

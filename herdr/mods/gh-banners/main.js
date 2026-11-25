@@ -63,7 +63,7 @@ export default class GhBanners extends View {
         post: (b) => exec("open", ["-n", "-g", "-a", this.app, "--args", "--title", b.title, "--body", b.body, "--url", b.url]).catch(() => null),
         banners: banners(events, prev?.saved_at ?? null, now),
       });
-      await this.writeTodo(todo(snap, now));
+      await this.writeTodo(todo(snap, now, prev));
     } catch (error) {
       await this.writeTodo(null, error?.message ?? String(error));
     } finally {

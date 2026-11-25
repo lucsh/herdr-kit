@@ -21,6 +21,7 @@ export const QUERY_MINE = `query($after:String){
 const STALE_MS = 15 * 60_000;
 const MANY = 3;
 const MERGED_SLACK_MS = 5 * 60_000;
+const MERGED_KEEP = 100;
 const PULLS = 'https://github.com/pulls';
 const FAILED_RUN = new Set(['FAILURE', 'TIMED_OUT', 'CANCELLED', 'ACTION_REQUIRED', 'STARTUP_FAILURE']);
 const ORDER = ['review', 'ci', 'ready', 'merged'];
@@ -61,6 +62,7 @@ function minePr(n) {
     sha: commit?.oid ?? '',
     ciFailed: ciFailed(commit?.statusCheckRollup?.contexts?.nodes ?? []),
     ready: !n.isDraft && (n.mergeStateStatus === 'CLEAN' || n.mergeStateStatus === 'HAS_HOOKS') && !n.autoMergeRequest,
+    mergeUnknown: n.mergeStateStatus === 'UNKNOWN',
   };
 }
 
@@ -75,22 +77,30 @@ export function parsePoll(reviewsMerged, minePages) {
   };
 }
 
+/** URLs of PRs ready to merge; one GitHub is still recomputing (UNKNOWN) keeps what it was. */
+function readyUrls(snap, prev) {
+  const was = new Set(prev?.ready ?? []);
+  return snap.mine.filter((p) => p.ready || (p.mergeUnknown && was.has(p.url))).map((p) => p.url);
+}
+
 /** The new saved state and the events since `prev` (none on a first run, when `prev` is null). */
 export function diff(prev, snap, now) {
+  const firedBefore = (p) => prev?.ci?.[p.url]?.sha === p.sha && prev.ci[p.url].fired;
   const state = {
     saved_at: now,
     reviews: snap.reviews.map((p) => p.url),
-    ci: Object.fromEntries(snap.mine.map((p) => [p.url, { sha: p.sha, fired: p.ciFailed }])),
-    ready: snap.mine.filter((p) => p.ready).map((p) => p.url),
+    ci: Object.fromEntries(snap.mine.map((p) => [p.url, { sha: p.sha, fired: p.ciFailed || firedBefore(p) }])),
+    ready: readyUrls(snap, prev),
+    merged: [...new Set([...snap.merged.map((p) => p.url), ...(prev?.merged ?? [])])].slice(0, MERGED_KEEP),
   };
   if (!prev) return { state, events: [] };
   const event = (kind, p) => ({ kind, url: p.url, repo: p.repo, number: p.number, title: p.title, author: p.author });
-  const reviewed = new Set(prev.reviews ?? []), ready = new Set(prev.ready ?? []);
+  const reviewed = new Set(prev.reviews ?? []), ready = new Set(prev.ready ?? []), announced = new Set(prev.merged ?? []);
   const events = [
     ...snap.reviews.filter((p) => !reviewed.has(p.url)).map((p) => event('review', p)),
-    ...snap.mine.filter((p) => p.ciFailed && !(prev.ci?.[p.url]?.sha === p.sha && prev.ci[p.url].fired)).map((p) => event('ci', p)),
+    ...snap.mine.filter((p) => p.ciFailed && !firedBefore(p)).map((p) => event('ci', p)),
     ...snap.mine.filter((p) => p.ready && !ready.has(p.url)).map((p) => event('ready', p)),
-    ...snap.merged.filter((p) => Date.parse(p.mergedAt) >= prev.saved_at - MERGED_SLACK_MS).map((p) => event('merged', p)),
+    ...snap.merged.filter((p) => !announced.has(p.url) && Date.parse(p.mergedAt) >= prev.saved_at - MERGED_SLACK_MS).map((p) => event('merged', p)),
   ];
   return { state, events };
 }
@@ -110,8 +120,10 @@ export function banners(events, prevSavedAt, now) {
   }));
 }
 
-/** The "Waiting on you" list: review requests, then failed CI, then ready to merge; newest first in each. */
-export function todo(snap, now) {
+/** The "Waiting on you" list: review requests, then failed CI, then ready to merge; newest first in each.
+ *  `prev` (the state before this poll) keeps a ready PR listed while GitHub recomputes its merge state. */
+export function todo(snap, now, prev = null) {
+  const ready = new Set(readyUrls(snap, prev));
   const newest = (a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt);
   const item = (kind) => (p) => ({ kind, url: p.url, repo: p.repo, number: p.number, title: p.title, author: p.author, updatedAt: p.updatedAt });
   return {
@@ -120,7 +132,7 @@ export function todo(snap, now) {
     items: [
       ...[...snap.reviews].sort(newest).map(item('review')),
       ...snap.mine.filter((p) => p.ciFailed).sort(newest).map(item('ci')),
-      ...snap.mine.filter((p) => p.ready).sort(newest).map(item('ready')),
+      ...snap.mine.filter((p) => ready.has(p.url)).sort(newest).map(item('ready')),
     ],
   };
 }
