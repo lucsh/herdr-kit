@@ -12,6 +12,7 @@ My Herdr desktop app setup, for any Mac.
 - **Tasks panel.** Each repo gets one to-do list, shared by all of its worktrees. Agents add to the same list with `tasks add "[<branch>] <text>"`. The `tasks` command is zamarrowski/herdr-tasks' CLI, pinned in `kit.env`.
 - **Status bar.** It shows the focused Claude session's model, effort, context, 5-hour and weekly usage, cost, run time and account. It also shows the folder, the branch with its count of changed files, and the lines added and removed.
 - **Working agents** show a braille spinner.
+- **Agent banners.** When an agent needs you, or finishes while you're looking elsewhere, you get a macOS banner from `HerdrNotify.app` instead of Herdr's in-app note. Clicking it brings Herdr forward on that agent. Until Herdr Notify is allowed to post, these alerts stay in-app. Other in-app notes are unchanged.
 - **Pull requests panel.** It's a tab next to Files and Changes, with two lists. **Waiting on you** shows what needs you now: PRs that ask you for a review by name, your PRs whose CI finished failing, and your PRs that are ready to merge. Each one leaves the list once it's dealt with. **Agents** lists the PRs your agents opened. Click a PR in either list to see its CI, logs and comments. It's based on jjangsky/herdr-pr-flow 0.6.0 (MIT), and no longer follows its releases.
 - **GitHub banners.** A macOS banner, from a small helper app called `HerdrNotify.app`, fires when someone asks you for a review by name, when CI finishes failing on one of your PRs, when one of your PRs becomes ready to merge, and when one is merged. Click a banner to open the PR. Herdr checks GitHub once a minute while it's open. After a gap (lid closed, Herdr quit) or a burst of more than 3 events, you get one summary banner instead.
 - **Calendar panel.** It shows today's macOS Calendar events with a now line and Join buttons for video calls. **Sync** forces your accounts to refresh (it has Calendar.app reload them, opening it hidden if needed). A small helper app, `HerdrCalendar.app`, reads the calendar with its own permission; the installer builds it.
@@ -77,7 +78,7 @@ This removes only what the installer created (files that were already there, eve
 
 ## Caveats
 
-- The `my-*` mods and `files-md` are copies of Herdr 0.1.16's built-in mods (`agents`, `tabs`, `pane`, `workspace-status`, `files`). Herdr updates won't reach them. The installer warns when the Herdr version differs, and runs `herdr-app check` on every mod.
+- The `my-*` mods and `files-md` are copies of Herdr 0.1.16's built-in mods (`agents`, `tabs`, `pane`, `workspace-status`, `toast`, `files`). Herdr updates won't reach them. The installer warns when the Herdr version differs, and runs `herdr-app check` on every mod.
 - The calendar helper is ad-hoc signed, so every rebuild (when its source changes) makes macOS ask for Calendars and Automation access again. If Sync says nothing changed, check System Settings › Privacy & Security › Automation › Herdr Calendar › Calendar.
 - The GitHub banner helper is ad-hoc signed too, so every rebuild makes macOS ask to allow its notifications again. If banners stop, check System Settings › Notifications › Herdr Notify.
 - GitHub banners only fire while Herdr is open. Events from while it was closed or asleep arrive as one summary banner when it next checks.
