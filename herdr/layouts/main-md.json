@@ -205,14 +205,33 @@
           "resizable": true
         },
         {
-          "id": "status",
-          "type": "block",
-          "content": {
-            "mod": "my-status"
-          },
+          "id": "status-row",
+          "type": "row",
           "size": {
             "px": 28
-          }
+          },
+          "children": [
+            {
+              "id": "status",
+              "type": "block",
+              "content": {
+                "mod": "my-status"
+              },
+              "size": {
+                "weight": 1
+              }
+            },
+            {
+              "id": "gh-banners",
+              "type": "block",
+              "size": {
+                "px": 0
+              },
+              "content": {
+                "mod": "gh-banners"
+              }
+            }
+          ]
         }
       ],
       "resizable": false

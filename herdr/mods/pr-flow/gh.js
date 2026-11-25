@@ -87,8 +87,6 @@ export function createGh(exec) {
       await run(['pr', 'merge', url, `--${method}`, '--match-head-commit', headSha]);
     },
     authOk: async () => (await exec('gh', ['auth', 'status'])).code === 0,
-    // Once a day at most, for the update notice (update.js).
-    latestRelease: (repo) => json(['api', `repos/${repo}/releases/latest`]),
   };
 }
 
