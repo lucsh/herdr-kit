@@ -20,6 +20,7 @@ You are installing this kit on a Mac for the person at it. `README.md` says what
    - `tasks path` prints a path under `~/.local/state/herdr-tasks/`.
    - `jq '{error, events: (.events | length)}' ~/.cache/herdr-calendar/today.json` shows `"error": null`. If it shows `"denied"`, the person turns on Herdr Calendar in System Settings › Privacy & Security › Calendars, then presses Sync in the Calendar panel.
    - `open -n -g -a ~/.local/share/herdr-notify/HerdrNotify.app --args --test` shows a "Test banner", and `jq .authorized ~/.cache/herdr-github/notify.json` shows `true`. If it shows `false`, the person turns on Herdr Notify in System Settings › Notifications.
+   - Agent banners: pick a live agent's terminal id from `herdr-app ls`, then `open -n -g -a ~/.local/share/herdr-notify/HerdrNotify.app --args --title "Agent check" --body "click me" --do agent.focus --do-args '{"terminal":"<id>"}' --herdr "$(command -v herdr-app)"`. Ask the person to click the banner: Herdr comes forward on that agent.
    - With Herdr open, within a minute `jq '{error, fetched_at}' ~/.cache/herdr-github/todo.json` shows `"error": null` and a recent time. An `HTTP 502` error clears on the next check. Any other error, such as a login one, needs `gh auth login`.
    - If the installer set the Claude status line (it printed no status-line note), a new Claude session in a Herdr terminal creates `~/.cache/herdr-claude/<terminal id>.json` within a few seconds.
 
