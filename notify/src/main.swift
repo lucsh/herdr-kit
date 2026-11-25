@@ -1,6 +1,8 @@
 // HerdrNotify: posts one macOS banner for the Herdr GitHub watcher (mods/gh-banners), and opens the
 // banner's PR when it's clicked. A separate app so its notifications have their own name and permission.
-//   HerdrNotify --title T --body B --url U   post a banner
+//   HerdrNotify --title T --body B --url U   post a banner; a click opens U
+//   HerdrNotify --title T --body B --do C --do-args JSON --herdr PATH
+//                                            post a banner; a click brings Herdr forward and runs `PATH do C JSON`
 //   HerdrNotify --test                       post a test banner
 //   (no arguments)                           launched by a banner click: open its URL
 // Every run records whether notifications are allowed in ~/.cache/herdr-github/notify.json.
@@ -36,6 +38,7 @@ final class Delegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterD
     let title = test ? "Herdr Notify" : arg("--title")
     let body = test ? "Test banner" : (arg("--body") ?? "")
     let url = test ? "https://github.com/pulls" : (arg("--url") ?? "")
+    let command = arg("--do") ?? "", commandArgs = arg("--do-args") ?? "{}", herdr = arg("--herdr") ?? ""
     center.requestAuthorization(options: [.alert, .sound]) { granted, _ in
       record(authorized: granted)
       guard let title else {
@@ -48,17 +51,29 @@ final class Delegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterD
       content.title = title
       content.body = body
       content.sound = .default
-      content.userInfo = ["url": url]
-      // The URL as identifier: a repeat replaces the earlier banner instead of stacking.
-      let request = UNNotificationRequest(identifier: url.isEmpty ? UUID().uuidString : url, content: content, trigger: nil)
+      content.userInfo = ["url": url, "do": command, "doArgs": commandArgs, "herdr": herdr]
+      // A repeat for the same PR or agent replaces the earlier banner instead of stacking.
+      let key = command.isEmpty ? url : command + commandArgs
+      let request = UNNotificationRequest(identifier: key.isEmpty ? UUID().uuidString : key, content: content, trigger: nil)
       self.center.add(request) { _ in exit(0) }
     }
   }
 
-  /// A banner was clicked: open its PR, then quit.
+  /// A banner was clicked: open its PR, or bring Herdr forward and run its command; then quit.
   func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
                               withCompletionHandler done: @escaping () -> Void) {
-    if let s = response.notification.request.content.userInfo["url"] as? String, let u = URL(string: s), !s.isEmpty {
+    let info = response.notification.request.content.userInfo
+    let command = info["do"] as? String ?? "", herdr = info["herdr"] as? String ?? ""
+    if !command.isEmpty {
+      NSWorkspace.shared.openApplication(at: URL(fileURLWithPath: "/Applications/Herdr.app"), configuration: NSWorkspace.OpenConfiguration())
+      if !herdr.isEmpty {
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: herdr)
+        p.arguments = ["do", command, info["doArgs"] as? String ?? "{}"]
+        try? p.run()
+        p.waitUntilExit()
+      }
+    } else if let s = info["url"] as? String, let u = URL(string: s), !s.isEmpty {
       NSWorkspace.shared.open(u)
     }
     done()
