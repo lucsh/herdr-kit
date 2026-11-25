@@ -63,14 +63,37 @@ export function createTracker({ gh, remoteOf, worktreesOf = async () => [], subm
     const parsed = parsePrUrl(url);
     if (!parsed) return null;
     const entry = (tracked[parsed.url] ??= { url: parsed.url, repo: parsed.repo, number: parsed.number, branch: '', headSha: '', headSeenAt: now() });
+    delete entry.peek; // discovered while open from "Waiting on you": it's a real card now
     if (branch) entry.branch = branch;
     return entry;
+  }
+
+  /** Saves the tracked PRs, leaving out the ones only open for viewing. */
+  function save() {
+    store.save(Object.fromEntries(Object.entries(tracked).filter(([, e]) => !e.peek)));
+  }
+
+  /** Tracks a PR just to show it (from "Waiting on you"): not saved, and not in the agent list. */
+  async function peek(url) {
+    const parsed = parsePrUrl(url);
+    if (!parsed) return;
+    tracked[parsed.url] ??= { url: parsed.url, repo: parsed.repo, number: parsed.number, branch: '', headSha: '', headSeenAt: now(), peek: true };
+    await refresh(parsed.url);
+  }
+
+  /** Forgets a PR that `peek` added; a PR tracked for real stays. */
+  function unpeek(url) {
+    const key = parsePrUrl(url)?.url;
+    if (!key || !tracked[key]?.peek) return;
+    delete tracked[key];
+    live.delete(key);
+    flows.delete(key);
   }
 
   // A working agent may open a PR at any moment; an idle one rarely does.
   async function discover(agent) {
     const { repo, branch } = agent;
-    if (Object.values(tracked).some((t) => t.repo === repo && t.branch === branch)) return;
+    if (Object.values(tracked).some((t) => !t.peek && t.repo === repo && t.branch === branch)) return;
     const key = `${repo}:${branch}`;
     const wait = agent.status === 'working' ? DISCOVER_WORKING_MS : DISCOVER_IDLE_MS;
     if (now() - (discovered.get(key) ?? -Infinity) < wait) return;
@@ -78,7 +101,7 @@ export function createTracker({ gh, remoteOf, worktreesOf = async () => [], subm
     const url = await gh.discover(repo, branch).catch((error) => { lastError = error.message; return null; });
     if (!url) return;
     const entry = track(url, branch);
-    store.save(tracked);
+    save();
     await refresh(entry.url);
   }
 
@@ -93,9 +116,9 @@ export function createTracker({ gh, remoteOf, worktreesOf = async () => [], subm
     if (!extra.size) return;
     scanned.set(key, now());
     const prs = await gh.openPrs(first.repo).catch((error) => { lastError = error.message; return []; });
-    const added = prs.filter((p) => extra.has(p.branch) && !tracked[parsePrUrl(p.url)?.url]).map((p) => track(p.url, p.branch)).filter(Boolean);
+    const added = prs.filter((p) => extra.has(p.branch) && (!tracked[parsePrUrl(p.url)?.url] || tracked[parsePrUrl(p.url)?.url].peek)).map((p) => track(p.url, p.branch)).filter(Boolean);
     if (!added.length) return;
-    store.save(tracked);
+    save();
     await inBatches(added, (e) => refresh(e.url));
   }
 
@@ -108,9 +131,9 @@ export function createTracker({ gh, remoteOf, worktreesOf = async () => [], subm
     let added = false;
     for (const url of urls) {
       const parsed = parsePrUrl(url);
-      if (parsed && !tracked[parsed.url]) { track(url); added = true; }
+      if (parsed && (!tracked[parsed.url] || tracked[parsed.url].peek)) { track(url); added = true; }
     }
-    if (added) store.save(tracked);
+    if (added) save();
   }
 
   async function refresh(url) {
@@ -134,7 +157,7 @@ export function createTracker({ gh, remoteOf, worktreesOf = async () => [], subm
       lastError = error.message;
       live.set(url, { ...live.get(url), error: error.message, fetchedAt: now() });
     }
-    store.save(tracked);
+    save();
   }
 
   // After a merge only Actions changes, so this is all a merged PR costs. Jobs are fetched for
@@ -242,7 +265,7 @@ export function createTracker({ gh, remoteOf, worktreesOf = async () => [], subm
     for (const entry of Object.values(tracked)) {
       const data = live.get(entry.url);
       const agent = agentFor(entry);
-      const base = { key: entry.url, url: entry.url, repo: entry.repo, number: entry.number, agent };
+      const base = { key: entry.url, url: entry.url, repo: entry.repo, number: entry.number, agent, peek: Boolean(entry.peek) };
       if (!data?.pr) {
         out.push({ ...base, loading: true, error: data?.error });
         continue;
@@ -262,6 +285,8 @@ export function createTracker({ gh, remoteOf, worktreesOf = async () => [], subm
     loadJobs,
     refreshAll: () => inBatches(Object.values(tracked), (e) => refresh(e.url)),
     track,
+    peek,
+    unpeek,
     cards,
     lastError: () => lastError,
   };
