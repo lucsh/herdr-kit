@@ -17,7 +17,7 @@ const STRINGS = {
     comment_hint: 'Click a line to comment', comment_on: (where) => `Comment on ${where}`, comment_placeholder: 'Leave feedback', comment_send: 'Send', comment_sending: 'Sending…', comment_cancel: 'Cancel',
     merge_do: (m) => `Merge (${m})`, merge_confirm: 'Press again to merge', merging: 'Merging…',
     tab_waiting: (n) => `Waiting on you (${n})`, tab_agents: 'Agents', w_review: 'Review requested', w_ci: 'CI failed', w_ready: 'Ready to merge', w_empty: 'Nothing waiting on you',
-    settings: 'Settings', language: 'Language', lang_auto: 'Follow system', just_now: 'just now', ago: (n, u) => `${n}${{ m: 'm', h: 'h', d: 'd' }[u]} ago`, close: 'Close',
+    just_now: 'just now', ago: (n, u) => `${n}${{ m: 'm', h: 'h', d: 'd' }[u]} ago`, close: 'Close',
   },
   ko: {
     title: 'Pull requests', back: '목록', agent_go: '이동', progress: '처리 과정', comments_open: (n) => `안 끝난 코멘트 ${n}`,
@@ -37,7 +37,7 @@ const STRINGS = {
     comment_hint: '줄을 누르면 코멘트를 남길 수 있습니다', comment_on: (where) => `${where} 코멘트`, comment_placeholder: '피드백을 입력하세요', comment_send: '보내기', comment_sending: '보내는 중…', comment_cancel: '취소',
     merge_do: (m) => `머지 (${m})`, merge_confirm: '한 번 더 누르면 머지', merging: '머지하는 중…',
     tab_waiting: (n) => `나를 기다리는 일 (${n})`, tab_agents: '에이전트', w_review: '리뷰 요청', w_ci: 'CI 실패', w_ready: '머지 가능', w_empty: '기다리는 일이 없습니다',
-    settings: '설정', language: '언어', lang_auto: '시스템 언어 따르기', just_now: '방금', ago: (n, u) => `${n}${{ m: '분', h: '시간', d: '일' }[u]} 전`, close: '닫기',
+    just_now: '방금', ago: (n, u) => `${n}${{ m: '분', h: '시간', d: '일' }[u]} 전`, close: '닫기',
   },
 };
 

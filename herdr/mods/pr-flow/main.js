@@ -16,6 +16,8 @@ const VIEW_KEY = "pr-flow.view";
 const LANG_KEY = "pr-flow.lang";
 const TICK_MS = 5000;
 const FILES_FOLD_AT = 10; // more changed files than this start folded
+// "Waiting on you" group headings: icon and theme color, so the groups are easy to tell apart.
+const HEADING = { review: ["comment", "ansi4"], ci: ["cross", "ansi1"], ready: ["merge", "ansi2"] };
 
 const icon = (name, size, color) => svg(`mods/${MOD}/${name}.svg`).size(size).flex_none().text_color(color);
 const toneColor = (t, tone) => ({ ok: t.ansi2, bad: t.ansi1, warn: t.blocked, wait: t.foreground, run: t.working, merge: t.ansi2, merged: t.ansi5, dim: t.dim, comment: t.muted, todo: t.dim }[tone] ?? t.muted);
@@ -181,7 +183,6 @@ export default class PrFlow extends View {
     else if (name === "agent") this.goToAgent(card);
     else if (name === "github" && card) openExternal(card.url);
     else if (name === "refresh") this.refreshNow(cx);
-    else if (name === "settings") this.settingsOpen = !this.settingsOpen;
     else if (name.startsWith("lang-")) setShared(LANG_KEY, name.slice(5));
     else if (name === "first-run" && card?.flow) { const r = flowRows(card, this.t, Date.now())[0]; if (r) this.toggleRun(card, r.id, cx); }
     else if (name === "last-run" && card?.flow) { const r = flowRows(card, this.t, Date.now()).at(-1); if (r) this.toggleRun(card, r.id, cx); }
@@ -366,10 +367,7 @@ export default class PrFlow extends View {
 
   onKey(e, cx) {
     const cards = this.shown();
-    if (this.settingsOpen) {
-      if (e.key !== "escape" && e.key !== "backspace") return;
-      this.settingsOpen = false;
-    } else if (this.issueUrl) {
+    if (this.issueUrl) {
       if (e.key === "o") openExternal(this.issueUrl);
       else if (e.key === "escape" || e.key === "backspace") this.issueUrl = null;
       else return;
@@ -465,9 +463,6 @@ export default class PrFlow extends View {
       .child(div().font_semibold().child(tr("title")))
       .when(count > 0, (e) => e.child(div().px(6).rounded(5).bg(t.raised).text_size(11).text_color(t.muted).child(String(count))))
       .child(div().flex_1())
-      .child(h_flex().id("settings").size(26).items_center().justify_center().rounded(6).cursor_pointer().hover((s) => s.bg(t.hover))
-        .on_click((_e, cx) => { this.settingsOpen = true; cx.notify(); })
-        .child(icon("settings", 14, t.muted)))
       .child(h_flex().id("refresh").size(26).items_center().justify_center().rounded(6).cursor_pointer().hover((s) => s.bg(t.hover))
         .on_click((_e, cx) => this.refreshNow(cx))
         .child(this.refreshing ? icon("spinner", 13, t.muted).spin(900) : icon("refresh", 14, t.muted)));
@@ -548,7 +543,11 @@ export default class PrFlow extends View {
     this.wSelected = Math.min(this.wSelected, Math.max(items.length - 1, 0));
     const rows = [];
     items.forEach((item, i) => {
-      if (item.kind !== items[i - 1]?.kind) rows.push(div().px(10).pt(i ? 12 : 4).pb(2).text_size(11.5).font_medium().text_color(t.dim).child(tr(`w_${item.kind}`)));
+      if (item.kind !== items[i - 1]?.kind) {
+        const [name, color] = HEADING[item.kind];
+        rows.push(h_flex().px(10).pt(i ? 14 : 4).pb(3).gap(6).items_center().child(icon(name, 12, t[color]))
+          .child(div().text_size(11.5).font_semibold().text_color(t[color]).child(tr(`w_${item.kind}`).toUpperCase())));
+      }
       rows.push(this.waitingRow(item, i, t));
     });
     const footer = error || note;
@@ -585,23 +584,6 @@ export default class PrFlow extends View {
       .when(Boolean(error), (e) => e.child(div().flex_none().px(14).py(6).border_t(1).border_color(t.border).truncate().text_size(11).text_color(t.ansi1).child(sanitize(error))));
   }
 
-  settingsScreen(t) {
-    const tr = this.t, choice = this.langChoice();
-    const options = [["auto", tr("lang_auto")], ["ko", "한국어"], ["en", "English"]];
-    return v_flex().size_full()
-      .child(h_flex().h(42).flex_none().px(8).gap(4).items_center().border_b(1).border_color(t.border)
-        .child(h_flex().id("settings-back").px(6).h(26).gap(2).items_center().rounded(6).cursor_pointer().hover((s) => s.bg(t.hover))
-          .on_click((_e, cx) => { this.settingsOpen = false; cx.notify(); })
-          .child(icon("back", 14, t.muted)).child(div().text_color(t.muted).child(tr("back"))))
-        .child(div().flex_1())
-        .child(div().pr(6).font_semibold().child(tr("settings"))))
-      .child(this.section(tr("language"), t))
-      .child(v_flex().px(8).gap(1).children(options.map(([value, label]) =>
-        h_flex().id(`lang-${value}`).w_full().h(32).flex_none().px(6).gap(8).items_center().rounded(6).cursor_pointer().when(choice === value, (e) => e.bg(t.selected)).hover((s) => s.bg(t.hover))
-          .on_click(() => setShared(LANG_KEY, value))
-          .child(div().flex_1().child(label))
-          .when(choice === value, (e) => e.child(icon("check", 13, t.ansi2))))));
-  }
 
   section(title, t) {
     return div().px(14).pt(16).pb(8).text_size(11.5).font_medium().text_color(t.dim).child(title);
@@ -918,6 +900,6 @@ export default class PrFlow extends View {
     const card = this.url ? this.current() : null;
     if (this.url && !card) this.url = null; // it closed while open
     return shell.id("pr-flow").track_focus(this.handle).on_key_down((e, cx) => this.onKey(e, cx)).on_mouse_down("left", () => this.handle.focus())
-      .child(this.settingsOpen ? this.settingsScreen(t) : card && this.issueUrl ? this.issueScreen(this.issueUrl, t) : card ? this.detail(card, t) : this.list(t));
+      .child(card && this.issueUrl ? this.issueScreen(this.issueUrl, t) : card ? this.detail(card, t) : this.list(t));
   }
 }
