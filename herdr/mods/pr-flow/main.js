@@ -523,10 +523,11 @@ export default class PrFlow extends View {
 
   /** Opens a "Waiting on you" PR in the detail view, tracking it just for viewing. */
   openWaiting(item, cx) {
+    const loaded = this.tracker.peek(item.url); // adds the card before its first await, so the detail view finds it
     this.url = item.url;
     this.handle.focus();
     cx.notify();
-    cx.spawn(async (cx) => { await this.tracker.peek(item.url); this.syncLog(cx); cx.notify(); });
+    cx.spawn(async (cx) => { await loaded; this.syncLog(cx); cx.notify(); });
   }
 
   /** One "Waiting on you" row: title, then repo #n · author · age. */

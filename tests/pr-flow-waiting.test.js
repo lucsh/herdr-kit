@@ -74,3 +74,10 @@ test("tracker peek: discovery promotes a peeked PR", async () => {
   assert.equal(tracker.cards()[0].peek, false);
   assert.ok(saves.at(-1).includes(URL1));
 });
+
+test("tracker peek: the card exists before the fetch finishes", () => {
+  const { tracker } = fakeTracker();
+  const pending = tracker.peek(URL1);
+  assert.equal(tracker.cards().find((c) => c.url === URL1)?.peek, true);
+  return pending;
+});
