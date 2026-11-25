@@ -6,24 +6,25 @@
 
 import { View, div, image } from "gpui-kit";
 import { v_flex, h_flex } from "gpui-base";
-import { props, closeOverlay, run, theme, exec, home } from "herdr";
+import { props, closeOverlay, run, theme, exec, home, readTextFile } from "herdr";
 import { route } from "./route.js";
 
 const DOT = { error: "blocked", warning: "working", success: "done", info: "accent" };
 
 export default class Toast extends View {
-  /** An agent notification waits (drawn as nothing) while herdr-app is looked up, then becomes a banner. */
+  /** An agent notification waits (drawn as nothing) while it's handed to HerdrNotify; if that can't
+   *  happen (banners not allowed, helper missing) it's drawn in-app as usual. */
   init(_props, cx) {
     const p = props() ?? {};
     this.pending = p.action?.name === "agent.focus";
     if (!this.pending) return;
     cx.spawn(async (cx) => {
-      const r = await exec("sh", ["-c", "command -v herdr-app"]).catch(() => null);
-      const banner = route(p, r?.code === 0 ? r.stdout.trim() : null);
+      const notifyRaw = await readTextFile(`${home()}/.cache/herdr-github/notify.json`).catch(() => null);
+      const banner = route(p, notifyRaw);
       if (banner) {
         const app = `${home()}/.local/share/herdr-notify/HerdrNotify.app`;
         const sent = await exec("open", ["-n", "-g", "-a", app, "--args", "--title", banner.title, "--body", banner.body,
-          "--do", banner.do, "--do-args", banner.doArgs, "--herdr", r.stdout.trim()]).catch(() => null);
+          "--do", banner.do, "--do-args", banner.doArgs]).catch(() => null);
         if (sent?.code === 0) { closeOverlay(p.overlay); return; }
       }
       this.pending = false;
