@@ -10,7 +10,7 @@ My Herdr desktop app setup, for any Mac.
 - **The `luc` theme.** It uses the colors of luc.sh: olive-black background, warm off-white text, coral accent.
 - **Files panel.** It has a search box. Code opens in a syntax-highlighted pane and markdown opens in a preview pane.
 - **Tasks panel.** Each repo gets one to-do list, shared by all of its worktrees. Agents add to the same list with `tasks add "[<branch>] <text>"`. The `tasks` command is zamarrowski/herdr-tasks' CLI, pinned in `kit.env`.
-- **Status bar.** It shows the focused Claude session's model, effort, context, 5-hour and weekly usage, cost, run time and account. It also shows the folder, the branch with its count of changed files, and the lines added and removed. `cmd-shift-o` opens the focused folder in Finder.
+- **Status bar.** It shows the focused Claude session's model, effort, context, 5-hour and weekly usage, cost, run time and account. It also shows the folder, the branch with its count of changed files, and the lines added and removed.
 - **Working agents** show a braille spinner.
 - **Pull requests panel.** It's a tab next to Files and Changes, with two lists. **Waiting on you** shows what needs you now: PRs that ask you for a review by name, your PRs whose CI finished failing, and your PRs that are ready to merge. Each one leaves the list once it's dealt with. **Agents** lists the PRs your agents opened. Click a PR in either list to see its CI, logs and comments. It's based on jjangsky/herdr-pr-flow 0.6.0 (MIT), and no longer follows its releases.
 - **GitHub banners.** A macOS banner, from a small helper app called `HerdrNotify.app`, fires when someone asks you for a review by name, when CI finishes failing on one of your PRs, when one of your PRs becomes ready to merge, and when one is merged. Click a banner to open the PR. Herdr checks GitHub once a minute while it's open. After a gap (lid closed, Herdr quit) or a burst of more than 3 events, you get one summary banner instead.
@@ -45,7 +45,7 @@ Settings are merged, never replaced:
 | File | Change |
 |---|---|
 | Herdr `settings.json` | `theme: "luc"`, only if no theme is set |
-| Herdr `keys.json` | `cmd-shift-g` and `cmd-shift-o`, each only if that key is free |
+| Herdr `keys.json` | `cmd-shift-g`, only if that key is free |
 | `~/.claude/settings.json` | the status line, only if none is set; otherwise the installer prints the one line to add to yours. With `--with-resume`, also two hooks |
 | `~/.claude/CLAUDE.md` and `~/.codex/AGENTS.md` | a marked "Tasks" block |
 | `~/.zshrc` | a marked `source` line, with `--with-resume` only |
