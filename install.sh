@@ -9,6 +9,7 @@ HERDR=${HERDR_APP_HOME:-$HOME/.config/herdr-app}
 SHARE=$HOME/.local/share/herdr-kit
 TASKS_DIR=$HOME/.local/share/herdr-tasks
 CAL=$HOME/.local/share/herdr-calendar
+NOTIFY=$HOME/.local/share/herdr-notify
 BIN=$HOME/.local/bin
 MANIFEST=$SHARE/manifest.txt
 RESUME=0 FORCE=0 CHECK=0
@@ -65,11 +66,11 @@ need jq "brew install jq"
 need rsync "brew install rsync"
 if command -v node >/dev/null && [ "$(node -p 'process.versions.node.split(".")[0]')" -ge 20 ]; then report ok "node $(node -v)"
 else report FAIL "Node.js 20+ not found" "brew install node (or nvm install 22)"; fi
-if ! command -v gh >/dev/null; then report warn "gh not found" "brew install gh, then gh auth login (person); needed by the Pull requests panel"
+if ! command -v gh >/dev/null; then report warn "gh not found" "brew install gh, then gh auth login (person); needed by the Pull requests panel and GitHub banners"
 elif gh auth status >/dev/null 2>&1; then report ok "gh signed in"
-else report warn "gh not signed in" "gh auth login (person); needed by the Pull requests panel"; fi
+else report warn "gh not signed in" "gh auth login (person); needed by the Pull requests panel and GitHub banners"; fi
 if command -v swiftc >/dev/null; then report ok "swiftc"
-else report warn "swiftc not found" "xcode-select --install (person); needed to build the Calendar helper"; fi
+else report warn "swiftc not found" "xcode-select --install (person); needed to build the Calendar and GitHub banner helpers"; fi
 if [ "$RESUME" = 1 ]; then need python3 "xcode-select --install (person)"; fi
 case ":$PATH:" in *":$BIN:"*) report ok "$BIN on PATH" ;; *) report warn "$BIN not on PATH" "add it to ~/.zshrc so agents can run tasks" ;; esac
 if [ -f "$HOME/.claude/settings.json" ] && jq -e '.statusLine' "$HOME/.claude/settings.json" >/dev/null 2>&1 \
@@ -88,6 +89,7 @@ for m in "$KIT"/herdr/mods/*/; do m=$(basename "$m"); add "herdr/mods/$m" "$HERD
 add bin/tasks "$BIN/tasks"
 add claude/statusline.sh "$SHARE/statusline.sh"
 add calendar "$CAL"
+add notify "$NOTIFY"
 if [ "$RESUME" = 1 ]; then
   add herdr/claude-resume.zsh "$HERDR/claude-resume.zsh"
   add claude/herdr-app-session-label.py "$SHARE/herdr-app-session-label.py"
@@ -96,7 +98,7 @@ fi
 # True when the manifest says a previous run installed $1.
 ours() { [ -f "$MANIFEST" ] && grep -qxF "$1" "$MANIFEST"; }
 # True when $1 and $2 have the same contents (ignoring Herdr's generated files).
-same() { diff -rq -x gpui-kit.d.ts -x jsconfig.json -x HerdrCalendar.app -x .built-source.sha "$1" "$2" >/dev/null 2>&1; }
+same() { diff -rq -x gpui-kit.d.ts -x jsconfig.json -x HerdrCalendar.app -x HerdrNotify.app -x .built-source.sha "$1" "$2" >/dev/null 2>&1; }
 
 clashes=()
 for i in "${!dsts[@]}"; do
@@ -131,14 +133,14 @@ for i in "${!dsts[@]}"; do
   s=${srcs[$i]} d=${dsts[$i]}
   mkdir -p "$(dirname "$d")"
   existed=0; [ -e "$d" ] && existed=1
-  if [ -d "$s" ]; then rsync -a --delete --exclude gpui-kit.d.ts --exclude jsconfig.json --exclude HerdrCalendar.app --exclude .built-source.sha "$s/" "$d/"
+  if [ -d "$s" ]; then rsync -a --delete --exclude gpui-kit.d.ts --exclude jsconfig.json --exclude HerdrCalendar.app --exclude HerdrNotify.app --exclude .built-source.sha "$s/" "$d/"
   else cp "$s" "$d"; fi
   # Only what this kit created (or --force replaced) is ours to remove later; an identical file
   # that was already there stays the person's.
   [ "$existed" = 0 ] && ! ours "$d" && echo "$d" >> "$MANIFEST"
 done
 mkdir -p "$HOME/.cache/herdr-claude"
-chmod +x "$BIN/tasks" "$SHARE/statusline.sh" "$CAL/build.sh"
+chmod +x "$BIN/tasks" "$SHARE/statusline.sh" "$CAL/build.sh" "$NOTIFY/build.sh"
 
 # ── calendar helper (its own app, so it gets its own Calendars permission) ───
 # Built only when missing or its source changed: each build is a new signature, and macOS asks again.
@@ -149,6 +151,17 @@ if command -v swiftc >/dev/null; then
     sh "$CAL/build.sh" >/dev/null && echo "$want" > "$CAL/.built-source.sha"
     open -n -g -a "$CAL/HerdrCalendar.app" --args --sync
     echo "note: allow \"Herdr Calendar\" to access your calendars and to control Calendar when macOS asks"
+  fi
+fi
+
+# ── GitHub banner helper (its own app, so its notifications have their own name and permission) ──
+if command -v swiftc >/dev/null; then
+  want=$(cat "$NOTIFY/src/main.swift" "$NOTIFY/src/Info.plist" | shasum | cut -c1-40)
+  if [ ! -d "$NOTIFY/HerdrNotify.app" ] || [ "$(cat "$NOTIFY/.built-source.sha" 2>/dev/null)" != "$want" ]; then
+    echo "Building the GitHub banner helper"
+    sh "$NOTIFY/build.sh" >/dev/null && echo "$want" > "$NOTIFY/.built-source.sha"
+    open -n -g -a "$NOTIFY/HerdrNotify.app" --args --test
+    echo "note: allow notifications from \"Herdr Notify\" (alert style Banners) when macOS asks"
   fi
 fi
 
