@@ -3,7 +3,7 @@
 // ~/.cache/herdr-claude/<terminal>.json (see statusLine in ~/.claude/settings.json); this reads it.
 import { View, div, svg } from "gpui-kit";
 import { h_flex } from "gpui-base";
-import { spaces, panes, agents, focused, theme, run, window, keys, home, exec, readTextFile, watchFolder } from "herdr";
+import { spaces, panes, agents, focused, theme, run, window, keys, home, exec, readTextFile, watchFolder, nextCommand } from "herdr";
 
 /** "27m", "1h 04m". */
 const duration = (ms) => { const m = Math.floor(ms / 60000); return m < 60 ? `${m}m` : `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, "0")}m`; };
@@ -26,6 +26,10 @@ export default class WorkspaceStatus extends View {
         try { await watchFolder(this.dir); } catch { await cx.sleep(5000); }
         await this.readClaude(cx);
       }
+    });
+    // "my-status.finder" in keys.json opens the focused folder in Finder.
+    cx.spawn(async () => {
+      for (;;) { if (await nextCommand() === "finder" && this.cwd) exec("open", [this.cwd]).catch(() => {}); }
     });
   }
 
