@@ -9,7 +9,7 @@ My Herdr desktop app setup, for any Mac.
 - **The `main-md` layout.** It has a sidebar, a tab bar with Files, Changes, Tasks and Pull requests buttons, and a bottom status bar.
 - **The `luc` theme.** It uses the colors of luc.sh: olive-black background, warm off-white text, coral accent.
 - **Files panel.** It has a search box. Code opens in a syntax-highlighted pane and markdown opens in a preview pane.
-- **Tasks panel.** Each repo gets one to-do list, shared by all of its worktrees. Agents add to the same list with `tasks add "[<branch>] <text>"`. The `tasks` command is zamarrowski/herdr-tasks' CLI, pinned in `kit.env`.
+- **Tasks panel.** Each repo gets one to-do list, shared by all of its worktrees. Outside a repo it shows a global list; inside one, the header switches between the repo's list and the global one. Agents add to the same list with `tasks add "[<branch>] <text>"`. The `tasks` command is zamarrowski/herdr-tasks' CLI, pinned in `kit.env`.
 - **Status bar.** It shows the focused Claude session's model, effort, context, 5-hour and weekly usage, cost, run time and account. It also shows the folder, the branch with its count of changed files, and the lines added and removed. `cmd-shift-o` opens the focused folder in Finder.
 - **Working agents** show a braille spinner.
 - **Agent banners.** When an agent needs you, or finishes while you're looking elsewhere, you get a macOS banner from `HerdrNotify.app` instead of Herdr's in-app note. Clicking it brings Herdr forward on that agent. Until Herdr Notify is allowed to post, these alerts stay in-app. Other in-app notes are unchanged.

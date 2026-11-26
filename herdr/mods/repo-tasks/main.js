@@ -1,7 +1,8 @@
 // Tasks panel: a plain to-do list per git repo, shared by all of the repo's worktrees (keyed by its
 // git common dir). Same file format as zamarrowski/herdr-tasks, stored at
 // ~/.local/state/herdr-tasks/<common dir with / as _>/tasks.json (outside a repo: .../global/), so a
-// `tasks` CLI pointed there with HERDR_PLUGIN_STATE_DIR edits the same list.
+// `tasks` CLI pointed there with HERDR_PLUGIN_STATE_DIR edits the same list. Inside a repo, the header
+// switches between the repo's list and the global one.
 import { View, div, svg } from "gpui-kit";
 import { v_flex, h_flex, InputState, Input } from "gpui-base";
 import { spaces, panes, focused, exec, readTextFile, writeTextFile, watchFolder, theme, home } from "herdr";
@@ -12,13 +13,15 @@ const now = () => new Date().toISOString();
 const newId = () => Array.from({ length: 8 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
 /** Pending first, then done; each group in stored order. */
 const ordered = (tasks) => [...tasks.filter(t => !t.done), ...tasks.filter(t => t.done)];
+/** The list used outside a repo, or when switched to from inside one. */
+const GLOBAL = { id: "global", name: "Global" };
 /** The tasks array from file text; [] when absent or unreadable. */
 const parse = (raw) => { try { const d = JSON.parse(raw ?? "{}"); return Array.isArray(d.tasks) ? d.tasks : []; } catch { return []; } };
 
 export default class RepoTasks extends View {
   /** Sets up the add and edit inputs; the list loads once the focused folder's repo is known. */
   init(_props, cx) {
-    this.tasks = []; this.raw = null; this.repo = null; this.where = null;
+    this.tasks = []; this.raw = null; this.repo = null; this.where = null; this.found = null; this.global = false;
     this.hover = null; this.confirm = null; this.editing = null; this.showDone = true;
     this.input = InputState.new({ placeholder: "Add a task…" });
     this.input.on("submit", (_e, cx) => {
@@ -50,10 +53,26 @@ export default class RepoTasks extends View {
       if (this.where !== where) return;
       const common = r?.code === 0 ? r.stdout.trim() : null;
       const top = common?.endsWith("/.git") ? common.slice(0, -5) : common;
-      this.open(common
-        ? { id: `${on ? on + ":" : ""}${common}`.replaceAll("/", "_"), name: top.split("/").pop() || top }
-        : { id: "global", name: "No repo · global list" }, cx);
+      this.found = common ? { id: `${on ? on + ":" : ""}${common}`.replaceAll("/", "_"), name: top.split("/").pop() || top } : null;
+      this.show(cx);
     });
+  }
+
+  /** Opens the focused repo's list, or the global one outside a repo or when switched to it. */
+  show(cx) {
+    this.open(this.found && !this.global ? this.found : GLOBAL, cx);
+    cx.notify();
+  }
+
+  /** Header control inside a repo: the repo's name and Global, the open one highlighted. */
+  scopes(t) {
+    const seg = (key, label, global) => div().id(`scope-${key}`).min_w(0).px(7).h(20).flex().items_center().rounded(5).cursor_pointer()
+      .text_size(12).when(this.global === global, el => el.bg(t.hover).text_color(t.foreground)).when(this.global !== global, el => el.text_color(t.dim))
+      .hover(s => s.text_color(t.foreground))
+      .on_click((_e, cx) => { if (this.global !== global) { this.global = global; this.show(cx); } })
+      .child(div().truncate().child(label));
+    return h_flex().min_w(0).p(2).gap(1).items_center().rounded(7).border_1().border_color(t.border)
+      .child(seg("repo", this.found.name, false)).child(seg("global", "Global", true));
   }
 
   /** Shows one repo's list and reloads it whenever its folder changes (the CLI writes there too). */
@@ -154,7 +173,10 @@ export default class RepoTasks extends View {
       .child(h_flex().h(42).flex_none().px(14).gap(8).items_center().border_b(1).border_color(t.border)
         .child(div().font_semibold().child("Tasks"))
         .when(pending.length > 0, el => el.child(div().px(6).rounded(5).bg(t.hover).text_size(11).text_color(t.muted).child(String(pending.length))))
-        .child(div().flex_1().min_w(0).truncate().text_right().text_size(12).text_color(t.dim).child(this.repo?.name ?? "")))
+        .child(div().flex_1())
+        .child(this.found
+          ? this.scopes(t)
+          : div().min_w(0).truncate().text_size(12).text_color(t.dim).child(this.repo ? "No repo · global list" : "")))
       .child(h_flex().h(30).flex_none().mx(8).mt(8).px(8).gap(6).items_center().rounded(7).border_1().border_color(t.border).bg(t.background)
         .child(div().text_color(t.dim).child("+"))
         .child(Input.new(this.input).flex_1().min_w(0).h_full().text_size(12).text_color(t.foreground)))
