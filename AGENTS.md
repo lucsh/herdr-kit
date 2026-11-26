@@ -32,7 +32,7 @@ You are installing this kit on a Mac for the person at it. `README.md` says what
 
 ## Rules
 
-- The Calendar panel reads the macOS calendar database only. The person's Google Workspace blocks unapproved apps from reading calendars, and an attempt raises flags with IT. When events look stale or missing, fix the Mac's account: System Settings › Internet Accounts, turn Calendars off and on again for that account, then press Sync.
+- The Calendar panel reads the macOS calendar database only. Don't try to read calendars through Google's or any other provider's API: work accounts often block unapproved apps, and an attempt can raise flags with IT. When events look stale or missing, fix the Mac's account: System Settings › Internet Accounts, turn Calendars off and on again for that account, then press Sync.
 - `HerdrCalendar.app` is ad-hoc signed, so every rebuild makes macOS ask for both permissions again. `install.sh` rebuilds it only when its source changed; run `calendar/build.sh` yourself only after editing `calendar/src/`.
 - `HerdrNotify.app` (the GitHub banner helper) is ad-hoc signed too, so a rebuild asks again to allow its notifications. The same rule applies: run `notify/build.sh` only after editing `notify/src/`.
 - Commit or push this repo only when the person asks.
